@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel-based Quiz</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #2e2e2e; /* Dark gray background */
+            color: white; /* Inverted text color */
+        }
+        .quiz-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .question {
+            font-weight: bold;
+            margin: 20px 0 10px;
+        }
+        .options {
+            margin-bottom: 20px;
+        }
+        .option {
+            margin: 10px 0; /* Add spacing between options */
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            background-color: #444; /* Slightly lighter gray for options */
+            color: white; /* Inverted text color */
+            transition: background-color 0.3s;
+            display: block; /* Ensure options stack vertically */
+        }
+        .option.correct {
+            color: white;
+            background-color: green; /* Correct answer color */
+        }
+        .option.wrong {
+            color: white;
+            background-color: red; /* Wrong answer color */
+        }
+        input[type="file"] {
+            color: white; /* Inverted file input text color */
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <h1>Excel-based Quiz</h1>
+        <input type="file" id="fileInput" accept=".xlsx" />
+        <div id="quiz"></div>
+    </div>
+
+    <script>
+        document.getElementById("fileInput").addEventListener("change", handleFile);
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: "array" });
+
+                // Dynamically select the first sheet instead of a fixed sheet name
+                const firstSheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[firstSheetName];
+                const rows = XLSX.utils.sheet_to_json(sheet);
+
+                loadQuiz(rows);
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function loadQuiz(questions) {
+            const quizDiv = document.getElementById("quiz");
+            quizDiv.innerHTML = "";
+
+            questions.forEach((q, index) => {
+                const questionDiv = document.createElement("div");
+                questionDiv.classList.add("question-block");
+
+                // Display the question text
+                const questionText = document.createElement("p");
+                questionText.classList.add("question");
+                questionText.textContent = `${index + 1}. ${q.Question}`;
+                questionDiv.appendChild(questionText);
+
+                const optionsDiv = document.createElement("div");
+                optionsDiv.classList.add("options");
+
+                // Create buttons for each option (A, B, C)
+                ['A', 'B', 'C'].forEach((opt) => {
+                    const option = document.createElement("button");
+                    option.classList.add("option");
+
+                    // Prefix the option with its letter
+                    option.textContent = `${opt}: ${q[opt]}`;
+
+                    // Determine if the answer is correct based on `aCorrect`, `bCorrect`, or `cCorrect`
+                    const isCorrect = q[`${opt.toLowerCase()}Correct`] === 1 || q[`${opt.toLowerCase()}Correct`] === true;
+
+                    option.onclick = () => {
+                        // Reset feedback for all options in this question
+                        const allOptions = optionsDiv.querySelectorAll(".option");
+                        allOptions.forEach((btn) => btn.classList.remove("correct", "wrong"));
+
+                        // Add feedback by coloring the selected button
+                        option.classList.add(isCorrect ? "correct" : "wrong");
+                    };
+
+                    optionsDiv.appendChild(option);
+                });
+
+                questionDiv.appendChild(optionsDiv);
+                quizDiv.appendChild(questionDiv);
+            });
+        }
+    </script>
+</body>
+</html>
